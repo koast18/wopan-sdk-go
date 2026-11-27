@@ -8,6 +8,27 @@ import (
 
 type Option func(w *WoClient)
 
+// WithClientCredentials selects the client identity that mints and refreshes the
+// tokens: ClientIDAndroid/ClientSecretAndroid for tokens harvested from the
+// Android app, ClientIDPCWeb/ClientSecretPCWeb for the PC/Web surface (default).
+func WithClientCredentials(clientID, clientSecret string) Option {
+	return func(w *WoClient) {
+		w.SetClientCredentials(clientID, clientSecret)
+	}
+}
+
+func WithPhone(phone string) Option {
+	return func(w *WoClient) {
+		w.SetPhone(phone)
+	}
+}
+
+func WithAppID(appID string) Option {
+	return func(w *WoClient) {
+		w.SetAppID(appID)
+	}
+}
+
 func WithAccessToken(token string) Option {
 	return func(w *WoClient) {
 		w.SetAccessToken(token)

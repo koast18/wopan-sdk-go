@@ -2,50 +2,15 @@ package wopan
 
 type FCloudProductOrdListQryCtxData struct {
 	FcloudProductOrds []struct {
-		ActiviteCode        string `json:"activiteCode"`
-		AppStorePackageDesc string `json:"appStorePackageDesc"`
-		AppStorePackageFee  string `json:"appStorePackageFee"`
-		AppStoreProductId   string `json:"appStoreProductId"`
-		ApplyTime           string `json:"applyTime"`
-		ApplyTimeFormate    string `json:"applyTimeFormate"`
-		CbssOrderId         string `json:"cbssOrderId"`
-		City                string `json:"city"`
-		ClientId            string `json:"clientId"`
-		Days                string `json:"days"`
-		DescUrl             string `json:"descUrl"`
-		EffectState         string `json:"effectState"`
-		EffectiveDays       int    `json:"effectiveDays"`
-		ExpireTime          string `json:"expireTime"`
-		ExpireTimeFormate   string `json:"expireTimeFormate"`
-		Fee                 string `json:"fee"`
-		IsAppStorePay       string `json:"isAppStorePay"`
-		IsAutoSub           string `json:"isAutoSub"`
-		IsExpire            string `json:"isExpire"`
-		IsNewPackage        string `json:"isNewPackage"`
-		IsOnline            string `json:"isOnline"`
-		IsPlus              string `json:"isPlus"`
-		IsShowExpireTips    string `json:"isShowExpireTips"`
-		OrderId             string `json:"orderId"`
-		OrderState          string `json:"orderState"`
-		OrderStatus         string `json:"orderStatus"`
-		PackageDesc         string `json:"packageDesc"`
-		PackageProductCode  string `json:"packageProductCode"`
-		PackageProductId    string `json:"packageProductId"`
-		PayMethod           string `json:"payMethod"`
-		PayTransactionId    string `json:"payTransactionId"`
-		PayType             string `json:"payType"`
-		Province            string `json:"province"`
-		RemainDays          string `json:"remainDays"`
-		SignStatus          string `json:"signStatus"`
-		Source              string `json:"source"`
-		SubTime             string `json:"subTime"`
-		SubTimeFormate      string `json:"subTimeFormate"`
-		SubType             string `json:"subType"`
-		UserId              string `json:"userId"`
-		VipDesc             string `json:"vipDesc"`
-		VipDescNew          string `json:"vipDescNew"`
-		VipExpireTimeLabel  string `json:"vipExpireTimeLabel"`
-		VipLevel            string `json:"vipLevel"`
+		ActiviteCode       string `json:"activiteCode"`
+		ApplyTime          string `json:"applyTime"`
+		EffectState        string `json:"effectState"`
+		ExpireTime         string `json:"expireTime"`
+		IsAutoSub          string `json:"isAutoSub"`
+		OrderState         string `json:"orderState"`
+		PackageProductCode string `json:"packageProductCode"`
+		VipDesc            string `json:"vipDesc"`
+		VipLevel           string `json:"vipLevel"`
 	} `json:"fcloudProductOrds"`
 	MaxVipLevel string `json:"maxVipLevel"`
 	IsShowInlet string `json:"isShowInlet"`
@@ -55,7 +20,7 @@ func (w *WoClient) FCloudProductOrdListQry(opts ...RestyOption) (*FCloudProductO
 	var resp FCloudProductOrdListQryCtxData
 	_, err := w.RequestWoHome(KeyFCloudProductOrdListQry, nil, Json{
 		"qryType":  "1",
-		"clientId": DefaultClientID,
+		"clientId": w.clientID,
 	}, &resp, opts...)
 	if err != nil {
 		return nil, err
@@ -85,6 +50,9 @@ type QueryCloudUsageInfoData struct {
 	Status     string `json:"status"`
 }
 
+// QueryCloudUsageInfo returns the quota and the membership level. phoneNum is
+// what the Android client sends; when Phone is empty it is taken from
+// AppQueryUser.
 func (w *WoClient) QueryCloudUsageInfo(opts ...RestyOption) (*QueryCloudUsageInfoData, error) {
 	err := w.InitPhone()
 	if err != nil {
@@ -93,7 +61,7 @@ func (w *WoClient) QueryCloudUsageInfo(opts ...RestyOption) (*QueryCloudUsageInf
 	var resp QueryCloudUsageInfoData
 	_, err = w.RequestWoHome(KeyQueryCloudUsageInfo, Json{
 		"phoneNum": w.Phone,
-		"clientId": DefaultClientID,
+		"clientId": w.clientID,
 	}, JsonSecret, &resp, opts...)
 	if err != nil {
 		return nil, err
@@ -149,7 +117,7 @@ type GetZoneInfoData struct {
 func (w *WoClient) GetZoneInfo(opts ...RestyOption) (*GetZoneInfoData, error) {
 	var resp GetZoneInfoData
 	_, err := w.RequestWoHome(KeyGetZoneInfo, Json{
-		"appId": DefaultAppID,
+		"appId": w.appID,
 	}, Json{
 		"key": true,
 	}, &resp, opts...)
@@ -167,14 +135,50 @@ type FamilyUserCurrentEncodeData struct {
 	GroupName       string `json:"groupName"`
 	Id              int    `json:"id"`
 	MemberRole      string `json:"memberRole"`
-	OwnerId         string `json:"owner  Id"`
+	OwnerId         string `json:"ownerId"`
 	UnreadFlag      string `json:"unreadFlag"`
 }
 
 func (w *WoClient) FamilyUserCurrentEncode(opts ...RestyOption) (*FamilyUserCurrentEncodeData, error) {
 	var resp FamilyUserCurrentEncodeData
 	_, err := w.RequestWoHome(KeyFamilyUserCurrentEncode, Json{
-		"clientId": DefaultClientID,
+		"clientId": w.clientID,
+	}, JsonSecret, &resp, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// FamilyGroup is the subset of FamilyListBean's group entries the driver cares
+// about: the id is what QueryAllFiles expects as familyId.
+type FamilyGroup struct {
+	Id           string `json:"id"`
+	GroupId      string `json:"groupId"`
+	GroupName    string `json:"groupName"`
+	GroupHeadUrl string `json:"groupHeadUrl"`
+	IsDefault    string `json:"isDefault"`
+	OwnerId      string `json:"ownerId"`
+	Status       string `json:"status"`
+}
+
+type FamilyListData struct {
+	FamilyCount        string        `json:"familyCount"`
+	MaxableFamilyCount string        `json:"maxableFamilyCount"`
+	ICreateGroups      []FamilyGroup `json:"iCreateGroups"`
+	IJoinGroups        []FamilyGroup `json:"iJoinGroups"`
+	ICreateGroupsCount int           `json:"iCreateGroupsCount"`
+	IJoinGroupsCount   int           `json:"iJoinGroupsCount"`
+	UnreadFlag         string        `json:"unreadFlag"`
+}
+
+// FamilyList lists the family groups the account owns or joined
+// (FamilyListRequest.java:19-25). It is the only way to discover a familyId:
+// login itself never returns one.
+func (w *WoClient) FamilyList(opts ...RestyOption) (*FamilyListData, error) {
+	var resp FamilyListData
+	_, err := w.RequestWoHome(KeyFamilyList, Json{
+		"clientId": w.clientID,
 	}, JsonSecret, &resp, opts...)
 	if err != nil {
 		return nil, err
@@ -192,11 +196,35 @@ func (w *WoClient) PrivateSpaceLogin(pwd string, opts ...RestyOption) error {
 	var resp PrivateSpaceLoginData
 	_, err := w.RequestWoHome(KeyPrivateSpaceLogin, Json{
 		"pwd":      pwd,
-		"clientId": DefaultClientID,
+		"clientId": w.clientID,
 	}, JsonSecret, &resp, opts...)
 	if err != nil {
 		return err
 	}
 	w.SetPsToken(resp.PsToken)
 	return nil
+}
+
+// DisplayMembershipCardData carries the per-file upload limit of the account
+// (uploadFileSize, in MB), which the client uses to refuse an oversized upload
+// before sending a single byte.
+type DisplayMembershipCardData struct {
+	VipLevel           string `json:"vipLevel"`
+	EffectiveEndDate   string `json:"effectiveEndDate"`
+	IsAutomaticRenewal string `json:"isAutomaticRenewal"`
+	IsNeedUpgrade      string `json:"isNeedUpgrade"`
+	UploadFileSize     string `json:"uploadFileSize"`
+}
+
+// DisplayMembershipCard is not a dispatcher endpoint: it lives at
+// /wohome/v1/displayMembershipCard but shares the same signed+encrypted
+// envelope.
+func (w *WoClient) DisplayMembershipCard(opts ...RestyOption) (*DisplayMembershipCardData, error) {
+	var resp DisplayMembershipCardData
+	_, err := w.RequestPath("/wohome/v1/displayMembershipCard", ChannelWoHome,
+		"displayMembershipCard", Json{"clientId": w.clientID}, JsonSecret, &resp, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

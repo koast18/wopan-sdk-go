@@ -11,9 +11,23 @@ type Crypto struct {
 func NewCrypto() *Crypto {
 	c := &Crypto{
 		key: []byte(DefaultClientSecret),
-		iv:  []byte("wNSOYIB1k1DjY5lA"),
+		iv:  []byte(DefaultIV),
 	}
 	return c
+}
+
+// SetClientSecret replaces the AES key of the api-user channel. It must carry
+// the secret of the client identity the tokens were minted with, otherwise the
+// edge cannot decrypt any login/refresh body.
+func (c *Crypto) SetClientSecret(secret string) {
+	if len(secret) < 16 {
+		return
+	}
+	c.key = []byte(secret[:16])
+}
+
+func (c *Crypto) ClientSecret() string {
+	return string(c.key)
 }
 
 func (c *Crypto) SetAccessToken(token string) error {

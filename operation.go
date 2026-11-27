@@ -6,6 +6,8 @@ func (w *WoClient) InitPhone() error {
 		if err != nil {
 			return err
 		}
+		// The client sends the phone number as phoneNum; the account API only
+		// exposes userId here, which is what this call has always used.
 		w.Phone = _resp.UserId
 	}
 	return nil
@@ -36,13 +38,18 @@ func (w *WoClient) InitZoneURL() error {
 }
 
 func (w *WoClient) RefreshToken() error {
+	if w.refreshToken == "" {
+		return ErrInvalidRefreshToken
+	}
 	resp, err := w.AppRefreshToken()
 	if err != nil {
 		return err
 	}
-	w.onRefreshToken(resp.AccessToken, resp.RefreshToken)
-	w.SetAccessToken(resp.AccessToken)
-	w.SetRefreshToken(resp.RefreshToken)
+	if resp.AccessToken == "" {
+		return ErrInvalidAccessToken
+	}
+	w.SetTokens(resp.AccessToken, resp.RefreshToken)
+	w.notifyTokensChanged(resp.AccessToken, resp.RefreshToken)
 	return nil
 }
 
