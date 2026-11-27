@@ -32,4 +32,10 @@ var (
 	// ErrVerificationCodeRequired is returned by the login helpers when the
 	// server asks for the graphical captcha (AppLoginBean.isNeedVerfyCode != 0).
 	ErrVerificationCodeRequired = errors.New("the server requires the graphical verification code: fetch it with GetVerifyCode(uuid) and retry the login with uuid+code")
+
+	// ErrSmsCodeRequired is returned when AppLoginAccount answers
+	// {"needSmsCode":"1"} instead of a token: the account cannot log in with a
+	// password alone, the caller has to request an SMS code with
+	// SendMessageCode and log in through AppLoginByMobile/AppLoginDoubleAuth.
+	ErrSmsCodeRequired = errors.New("the server requires an SMS code for this account: request one with SendMessageCode, then log in with the received code")
 )

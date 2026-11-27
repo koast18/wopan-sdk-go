@@ -11,6 +11,16 @@ type AppLoginBean struct {
 	Phone           string `json:"phone"`
 	IsSetIdInfo     string `json:"isSetIdInfo"`
 	IsNeedVerfyCode int    `json:"isNeedVerfyCode"`
+	// NeedSmsCode is what AppLoginAccount answers when the account cannot log in
+	// with a password alone: the server replies RSP_CODE 0000 with
+	// {"needSmsCode":"1"} and no token at all. Missing this field made an
+	// ordinary "please enter the SMS code" turn into "invalid access token".
+	NeedSmsCode string `json:"needSmsCode"`
+}
+
+// NeedsSmsCode reports whether the password login stopped at the SMS-code gate.
+func (b *AppLoginBean) NeedsSmsCode() bool {
+	return b != nil && b.AccessToken == "" && b.NeedSmsCode != "" && b.NeedSmsCode != "0"
 }
 
 // PcWebLoginData no encrypt
@@ -88,6 +98,9 @@ func (w *WoClient) AppLoginAccount(phone, password, uuid, verifyCode string, opt
 		return nil, err
 	}
 	w.adoptLoginBean(&resp, phone)
+	if resp.NeedsSmsCode() {
+		return &resp, ErrSmsCodeRequired
+	}
 	if resp.IsNeedVerfyCode != 0 && resp.AccessToken == "" {
 		return &resp, ErrVerificationCodeRequired
 	}
@@ -116,6 +129,9 @@ func (w *WoClient) AppLoginByMobile(phone, smsCode, password string, opts ...Res
 		return nil, err
 	}
 	w.adoptLoginBean(&resp, phone)
+	if resp.NeedsSmsCode() {
+		return &resp, ErrSmsCodeRequired
+	}
 	if resp.IsNeedVerfyCode != 0 && resp.AccessToken == "" {
 		return &resp, ErrVerificationCodeRequired
 	}
