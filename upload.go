@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"os"
 	"strconv"
 	"time"
 )
@@ -20,7 +19,7 @@ type Upload2COption struct {
 type Upload2CFile struct {
 	Name        string
 	Size        int64
-	Content     *os.File
+	Content     io.Reader
 	ContentType string
 }
 
@@ -49,7 +48,7 @@ func (w *WoClient) Upload2C(spaceType string, file Upload2CFile, targetDirId str
 		"fileSize":    file.Size,
 		"fileType":    w.GetFileType(file.Name),
 	}
-	if spaceType == SpaceTypeFamily {
+	if spaceType == SpaceTypeFamily && familyId != "" {
 		fileInfo["familyId"] = familyId
 	}
 	if spaceType == SpaceTypePrivate {
@@ -104,8 +103,14 @@ func (w *WoClient) Upload2C(spaceType string, file Upload2CFile, targetDirId str
 				if opt.OnRetry != nil {
 					opt.OnRetry(err, file.Name, partIndex, finishedSize)
 				}
-				_, serr := file.Content.Seek(finishedSize, 0)
-				if serr != nil {
+				// Rewinding needs a seekable source; a plain io.Reader (the
+				// v0.1.x contract) cannot be retried and reports the original
+				// error instead of silently sending a truncated part.
+				seeker, ok := file.Content.(io.Seeker)
+				if !ok {
+					return "", err
+				}
+				if _, serr := seeker.Seek(finishedSize, io.SeekStart); serr != nil {
 					return "", serr
 				}
 				err = w.uploadPart(opt.Ctx, uploadURL, file, formData, partIndex, partSize, &resp)
